@@ -1,0 +1,74 @@
+# Layer-adaptive pruning schedules for the Gap Proposal experiment
+# (Gap Proposal 2: "Layer-Adaptive Pruning Rates in TCA")
+#
+# R values are retention ratios (fraction of tokens KEPT) at drop_loc = [3, 6, 9].
+#
+# Usage: pass the three R values in order [R_layer3, R_layer6, R_layer9] to
+# runner.py via --pruning_schedule, e.g.:
+#   python runner.py --token_pruning Ours-0.1 --pruning_schedule 0.97 0.90 0.68 ...
+#
+# IMPORTANT FINDING (2026-09-21): the original v1 schedules below caused catastrophic
+# accuracy collapse (near-random) on real GPU runs. Root-caused via
+# scripts/debug_schedule_shapes.py: the token prune-and-merge arithmetic in
+# clip/model.py (`idx.shape[1] = 3*left_tokens - 2*N`) has a hard instability floor
+# around R~0.67 at any single layer - below that, the fixed num_centers=4 coreset
+# averaging step is forced to compress the overwhelming majority of surviving tokens
+# into just 4 representative vectors, destroying almost all information. It's not a
+# bug in the schedule-threading code (confirmed via the "uniform" schedule matching
+# the original code's output exactly) - it's a genuine, previously-undocumented
+# stability constraint of TCA's architecture. Even the paper's own literal "R=0.7
+# uniform at every layer" configuration crashes under this same arithmetic.
+# v2 schedules below were redesigned (via scripts/debug_schedule_shapes.py's
+# simulate() logic) to preserve each schedule's qualitative shape (still
+# conservative-early/aggressive-late for C2A, etc.) while keeping every layer's
+# per-step margin safely positive (see "min_idx_margin" per schedule below - all
+# comfortably above the ~5-14 margins that produced collapse in v1).
+
+uniform:
+  description: "Current TCA default - same pruning pressure at every drop location. Validated against the paper's own code (exact match)."
+  schedule: [0.90, 0.90, 0.90]
+  mean_r: 0.900
+  min_idx_margin: 71
+  status: "SAFE - validated on real GPU run, matches original code exactly"
+
+conservative_to_aggressive_v1_BROKEN:
+  description: "C2A v1 (original proposal) - defer aggressive pruning to deeper layers. CONFIRMED BROKEN: collapses to 11 surviving tokens by layer 9, near-random accuracy on real GPU run (Food101 2.85%, EuroSAT 8.47%). Kept here for the report's root-cause discussion, do not rerun expecting valid results."
+  schedule: [0.97, 0.90, 0.68]
+  mean_r: 0.850
+  min_idx_margin: 5
+  status: "BROKEN - confirmed via real GPU run + debug_schedule_shapes.py"
+
+aggressive_to_conservative_v1_BROKEN:
+  description: "A2C v1 (original proposal) - prune hardest early. CONFIRMED BROKEN: collapses to just 14 tokens at layer 3 itself, propagating garbage through 8 more layers. Kept for report discussion only."
+  schedule: [0.68, 0.90, 0.97]
+  mean_r: 0.850
+  min_idx_margin: 8
+  status: "BROKEN - confirmed via debug_schedule_shapes.py (real GPU run pending at time of writing)"
+
+mid_heavy_v1_BROKEN:
+  description: "Mid-heavy v1 (original proposal) - concentrate pruning at the middle layer. CONFIRMED BROKEN: collapses to 20 tokens at layer 6. Kept for report discussion only."
+  schedule: [0.90, 0.70, 0.95]
+  mean_r: 0.850
+  min_idx_margin: 14
+  status: "BROKEN - confirmed via debug_schedule_shapes.py (real GPU run pending at time of writing)"
+
+conservative_to_aggressive_v2:
+  description: "C2A v2 (revised) - same conservative-early/aggressive-late shape as v1, redesigned to stay clear of the collapse zone."
+  schedule: [0.95, 0.88, 0.78]
+  mean_r: 0.870
+  min_idx_margin: 38
+  status: "SAFE - simulated margins healthy, pending real GPU validation"
+
+aggressive_to_conservative_v2:
+  description: "A2C v2 (revised) - exact mirror of C2A v2 (aggressive-early/conservative-late), same safety redesign."
+  schedule: [0.78, 0.88, 0.95]
+  mean_r: 0.870
+  min_idx_margin: 41
+  status: "SAFE - simulated margins healthy, pending real GPU validation"
+
+mid_heavy_v2:
+  description: "Mid-heavy v2 (revised) - still dips hardest at the middle layer, redesigned to stay clear of the collapse zone."
+  schedule: [0.90, 0.78, 0.87]
+  mean_r: 0.850
+  min_idx_margin: 32
+  status: "SAFE - simulated margins healthy, pending real GPU validation"

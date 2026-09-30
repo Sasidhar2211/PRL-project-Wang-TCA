@@ -1,0 +1,11 @@
+#!/bin/bash -l
+#SBATCH --job-name=tca-debug-shapes
+#SBATCH --gres=gpu:rtx3080:1
+#SBATCH --partition=rtx3080
+#SBATCH --time=00:10:00
+#SBATCH --export=NONE
+#SBATCH --output=%x_%j.log
+unset SLURM_EXPORT_ENV
+export PATH="$WORK/conda_envs/TTA/bin:$PATH"
+cd $WORK/prl/TCA
+python scripts/debug_schedule_shapes.py
