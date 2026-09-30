@@ -21,7 +21,7 @@ Datasets: Aircraft, Caltech101, DTD, EuroSAT, Flower102, Food101, Pets, UCF101 (
 | EViT-0.1 (ours, original code) | 23.97 | 93.18 | 45.92 | 66.19 | 72.39 | 85.09 | 88.80 | 71.03 | 68.32 | — |
 | ToME-0.1 (ours, original code) | 24.27 | 92.58 | 44.74 | 46.79 | 69.43 | 84.87 | 87.95 | 68.73 | 64.92 | — |
 
-**Our gap-proposal experiment v1 (modified code, ORIGINAL schedules - CONFIRMED BROKEN, see configs/pruning_schedules.yaml for root-cause writeup; kept for the report's root-cause discussion):**
+**Our gap-proposal experiment v1 (modified code, ORIGINAL schedules - CONFIRMED BROKEN:**
 
 | Ours-0.1 schedule=[0.9,0.9,0.9] (v1, BROKEN) | 22.38 | 90.87 | 44.44 | 56.98 | 69.35 | 79.38 | 84.52 | 65.90 | 64.23 | — |
 | Ours-0.1 schedule=[0.97,0.9,0.68] (v1, BROKEN) | 2.85 | 36.19 | 5.32 | 8.47 | 6.66 | 10.83 | 22.05 | 11.45 | 12.98 | — |
